@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Matrix Rain Animation */
+@keyframes matrixFall {
+  0% {
+    transform: translateY(-100vh);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh);
+    opacity: 0;
+  }
+}
+
+.matrix-char {
+  animation: matrixFall linear infinite;
+  color: #44ffbb;
+  text-shadow: 0 0 10px #44ffbb, 0 0 20px #44ffbb;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.2;
+  position: absolute;
+  white-space: pre;
+}
+
+:root {
+  font-family: 'Courier Prime', 'Courier New', Monaco, 'Lucida Console', monospace;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  /* Matrix theme colors */
+  --matrix-green: #00FF41;
+  --matrix-green-dark: #008F11;
+  --matrix-green-light: #00FF00;
+  --matrix-black: #000000;
+  --matrix-dark-green: #003300;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* Prevent scrollbars from showing */
+  overflow-x: hidden;
+}
+
+/* Global styles for Matrix theme */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--matrix-black);
+  color: var(--matrix-green);
+  font-family: 'Courier Prime', 'Courier New', Monaco, 'Lucida Console', monospace;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar for Matrix theme */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--matrix-black);
+  border: 1px solid var(--matrix-dark-green);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--matrix-green-dark);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--matrix-green);
+}
+
+/* Selection styling */
+::selection {
+  background-color: var(--matrix-green);
+  color: var(--matrix-black);
+}
+
+::-moz-selection {
+  background-color: var(--matrix-green);
+  color: var(--matrix-black);
+}
+
+/* Ensure all text uses monospace font */
+* {
+  font-family: inherit;
+}
+
+/* Custom animations */
+@keyframes matrix-glow {
+  0%, 100% {
+    text-shadow: 0 0 5px var(--matrix-green), 0 0 10px var(--matrix-green), 0 0 15px var(--matrix-green);
+  }
+  50% {
+    text-shadow: 0 0 10px var(--matrix-green), 0 0 20px var(--matrix-green), 0 0 30px var(--matrix-green);
+  }
+}
+
+@keyframes matrix-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Utility classes */
+.matrix-glow {
+  animation: matrix-glow 2s ease-in-out infinite;
+}
+
+.matrix-pulse {
+  animation: matrix-pulse 1.5s ease-in-out infinite;
+}
+
+/* Prevent text selection on background elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Smooth transitions for all interactive elements */
+.transition-matrix {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hide default focus outlines and add custom ones */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--matrix-green);
+  outline-offset: 2px;
+}
