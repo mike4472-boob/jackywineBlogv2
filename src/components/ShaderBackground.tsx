@@ -15,67 +15,99 @@ void main() {
 `;
 
 const fragmentShaderSource = `
+// 设置浮点数精度为中等精度
 precision mediump float; 
- #define GLSLIFY 1 
- 
- uniform float u_time; 
- uniform vec2 u_mouse; 
- uniform vec2 u_resolution; 
- varying vec2 v_uv; 
- 
- float noise(vec2 p) { 
-     vec2 i = floor(p); 
-     vec2 f = fract(p); 
-     f = f * f * (3.0 - 2.0 * f); 
-     float a = sin(i.x + i.y * 31.23 + u_time); 
-     float b = sin(i.x + 1.0 + i.y * 31.23 + u_time); 
-     float c = sin(i.x + (i.y + 1.0) * 31.23 + u_time); 
-     float d = sin(i.x + 1.0 + (i.y + 1.0) * 31.23 + u_time); 
-     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); 
- } 
- 
- float fbm(vec2 p) { 
-     float sum = 0.0; 
-     float amp = 1.0; 
-     float freq = 1.0; 
-     for(int i = 0; i < 6; i++) { 
-         sum += noise(p * freq) * amp; 
-         amp *= 0.5; 
-         freq *= 2.0; 
-         p += vec2(3.123, 1.732); 
-     } 
-     return sum; 
- } 
- 
- void main() { 
-     vec2 uv = v_uv; 
-     vec2 aspect = vec2(u_resolution.x/u_resolution.y, 1.0); 
-     uv = uv * 2.0 - 1.0; 
-     uv *= aspect; 
-     
-     vec2 mouseInfluence = (u_mouse * 2.0 - 1.0) * aspect; 
-     float mouseDist = length(uv - mouseInfluence); 
-     float mouseEffect = smoothstep(0.5, 0.0, mouseDist); 
-     
-     float t = u_time * 0.2; 
-     vec2 movement = vec2(sin(t * 0.5), cos(t * 0.7)); 
-     
-     float n1 = fbm(uv * 3.0 + movement + mouseEffect); 
-     float n2 = fbm(uv * 2.0 - movement - mouseEffect); 
-     float n3 = fbm(uv * 4.0 + vec2(n1, n2)); 
-     
-     vec3 col1 = vec3(0.2, 0.5, 0.8); 
-     vec3 col2 = vec3(0.8, 0.2, 0.5); 
-     vec3 col3 = vec3(0.1, 0.8, 0.4); 
-     
-     vec3 finalColor = mix(col1, col2, n1); 
-     finalColor = mix(finalColor, col3, n2 * 0.5); 
-     finalColor += n3 * 0.2; 
-     
-     finalColor += vec3(mouseEffect * 0.2); 
-     
-     gl_FragColor = vec4(finalColor, 1.0); 
- }
+// GLSLIFY 标识符，用于着色器编译优化
+#define GLSLIFY 1 
+
+// 从JavaScript传入的uniform变量
+uniform float u_time;      // 时间变量，用于动画效果
+uniform vec2 u_mouse;      // 鼠标位置，范围[0,1]
+uniform vec2 u_resolution; // 屏幕分辨率
+varying vec2 v_uv;         // 从顶点着色器传入的UV坐标
+
+/**
+ * 噪声函数 - 生成基于位置的伪随机值
+ * @param p 输入的2D坐标
+ * @return 返回噪声值
+ */
+float noise(vec2 p) { 
+    vec2 i = floor(p);  // 获取整数部分
+    vec2 f = fract(p);  // 获取小数部分
+    // 使用平滑插值函数 smoothstep
+    f = f * f * (3.0 - 2.0 * f); 
+    
+    // 计算四个角的噪声值，使用sin函数和时间变量创建动态效果
+    float a = sin(i.x + i.y * 31.23 + u_time); 
+    float b = sin(i.x + 1.0 + i.y * 31.23 + u_time); 
+    float c = sin(i.x + (i.y + 1.0) * 31.23 + u_time); 
+    float d = sin(i.x + 1.0 + (i.y + 1.0) * 31.23 + u_time); 
+    
+    // 双线性插值混合四个角的值
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); 
+} 
+
+/**
+ * 分形布朗运动(Fractal Brownian Motion) - 创建复杂的噪声模式
+ * @param p 输入的2D坐标
+ * @return 返回分形噪声值
+ */
+float fbm(vec2 p) { 
+    float sum = 0.0;   // 累积和
+    float amp = 1.0;   // 振幅
+    float freq = 1.0;  // 频率
+    
+    // 叠加6层不同频率和振幅的噪声
+    for(int i = 0; i < 6; i++) { 
+        sum += noise(p * freq) * amp; 
+        amp *= 0.5;  // 每层振幅减半
+        freq *= 2.0; // 每层频率翻倍
+        p += vec2(3.123, 1.732); // 偏移坐标避免重复模式
+    } 
+    return sum; 
+} 
+
+void main() { 
+    // 获取当前像素的UV坐标
+    vec2 uv = v_uv; 
+    
+    // 计算屏幕宽高比，保持正确的比例
+    vec2 aspect = vec2(u_resolution.x/u_resolution.y, 1.0); 
+    
+    // 将UV坐标从[0,1]转换到[-1,1]，并应用宽高比
+    uv = uv * 2.0 - 1.0; 
+    uv *= aspect; 
+    
+    // 计算鼠标影响
+    vec2 mouseInfluence = (u_mouse * 2.0 - 1.0) * aspect; 
+    float mouseDist = length(uv - mouseInfluence);  // 当前像素到鼠标的距离
+    float mouseEffect = smoothstep(0.5, 0.0, mouseDist); // 鼠标影响强度
+    
+    // 创建时间相关的运动向量
+    float t = u_time * 0.2; 
+    vec2 movement = vec2(sin(t * 0.5), cos(t * 0.7)); 
+    
+    // 生成三层不同的分形噪声
+    float n1 = fbm(uv * 3.0 + movement + mouseEffect);     // 基础噪声层
+    float n2 = fbm(uv * 2.0 - movement - mouseEffect);     // 反向运动噪声层
+    float n3 = fbm(uv * 4.0 + vec2(n1, n2));               // 基于前两层的复合噪声
+    
+    // 定义三种基础颜色
+    vec3 col1 = vec3(0.267, 1.0, 0.733); // #44ffbb - 青绿色调
+    vec3 col2 = vec3(0.0, 0.0, 0.0);     // #000000 - 黑色调
+    vec3 col3 = vec3(0.043, 0.863, 0.471); // #0bdc78 - 绿色调
+    
+    // 根据噪声值混合颜色
+    vec3 finalColor = mix(col1, col2, n1);           // 基于n1混合蓝色和粉色
+    finalColor = mix(finalColor, col3, n2 * 0.5);   // 基于n2添加绿色
+    finalColor += n3 * 0.2;                         // 添加第三层噪声的亮度变化
+    
+    // 添加鼠标交互的亮度增强
+    finalColor += vec3(mouseEffect * 0.2); 
+    
+    // 输出最终颜色
+    gl_FragColor = vec4(finalColor, 1.0); 
+}
 `;
 
 export default function ShaderBackground({ className = '' }: ShaderBackgroundProps) {
