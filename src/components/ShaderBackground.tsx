@@ -15,93 +15,67 @@ void main() {
 `;
 
 const fragmentShaderSource = `
-precision mediump float;
-
-uniform float u_time;
-uniform vec2 u_mouse;
-uniform vec2 u_resolution;
-varying vec2 v_uv;
-
-#define MAIN_COLOR vec3(0.267, 1.0, 0.733)
-#define BG_COLOR vec3(0.0, 0.0, 0.0)
-#define SCROLL_SPEED 1.0
-#define DENSITY 40.0
-#define BRIGHTNESS 0.8
-#define FALLOFF 0.95
-#define GLOW_INTENSITY 1.2
-
-float random(vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
-}
-
-float randomChar(vec2 outer, vec2 inner) {
-    vec2 grid = floor(inner * vec2(10.0, 16.0));
-    float rnd = random(outer + grid);
-    return step(0.5, rnd);
-}
-
-float rain(vec2 uv) {
-    vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
-    uv *= DENSITY * aspect;
-    
-    vec2 gridPos = floor(uv);
-    vec2 cellUv = fract(uv);
-    
-    float rnd = random(gridPos);
-    float speed = SCROLL_SPEED * (rnd * 0.5 + 0.5);
-    
-    float timeOffset = u_time * speed;
-    float yPos = fract(rnd - timeOffset);
-    
-    // Mouse interaction - slow down columns near mouse and increase brightness
-    vec2 mousePos = u_mouse * DENSITY * aspect;
-    float mouseDist = length(mousePos - gridPos) / (DENSITY * 0.3);
-    float mouseInfluence = smoothstep(0.0, 1.0, exp(-mouseDist * 0.3));
-    yPos = fract(rnd - timeOffset * (1.0 - mouseInfluence * 0.9));
-    
-    // Brightness falloff based on y position
-    float brightness = pow(1.0 - yPos, 5.0) * BRIGHTNESS;
-    
-    // Character display
-    float char = randomChar(gridPos, vec2(gridPos.x, yPos * 100.0));
-    
-    // Glow effect
-    float glow = smoothstep(0.9, 1.0, 1.0 - distance(cellUv, vec2(0.5)));
-    
-    return char * brightness * (1.0 + glow * GLOW_INTENSITY * mouseInfluence);
-}
-
-void main() {
-    vec2 uv = v_uv;
-    
-    // Correct aspect ratio
-    vec2 aspect = vec2(u_resolution.x / u_resolution.y, 1.0);
-    uv = uv * 2.0 - 1.0;
-    uv *= aspect;
-    
-    // Matrix rain effect
-    float r = rain(vec2(uv.x, uv.y));
-    
-    // Mouse interaction - create a stronger glow around mouse position
-    vec2 mousePos = u_mouse * 2.0 - 1.0;
-    mousePos.x *= aspect.x;
-    float mouseDist = length(uv - mousePos);
-    // Increased glow radius from 0.5 to 1.0 and intensity from 0.5 to 0.8
-    float mouseGlow = smoothstep(1.0, 0.0, mouseDist) * 0.8;
-    
-    // Apply color
-    vec3 color = mix(BG_COLOR, MAIN_COLOR, r + mouseGlow);
-    
-    // Add subtle pulsing glow to the entire scene
-    float pulse = 0.05 * sin(u_time * 0.5);
-    color += MAIN_COLOR * pulse * r;
-    
-    // Add subtle scan lines
-    float scanLine = sin(uv.y * 100.0) * 0.02;
-    color -= scanLine;
-    
-    gl_FragColor = vec4(color, 1.0);
-}
+precision mediump float; 
+ #define GLSLIFY 1 
+ 
+ uniform float u_time; 
+ uniform vec2 u_mouse; 
+ uniform vec2 u_resolution; 
+ varying vec2 v_uv; 
+ 
+ float noise(vec2 p) { 
+     vec2 i = floor(p); 
+     vec2 f = fract(p); 
+     f = f * f * (3.0 - 2.0 * f); 
+     float a = sin(i.x + i.y * 31.23 + u_time); 
+     float b = sin(i.x + 1.0 + i.y * 31.23 + u_time); 
+     float c = sin(i.x + (i.y + 1.0) * 31.23 + u_time); 
+     float d = sin(i.x + 1.0 + (i.y + 1.0) * 31.23 + u_time); 
+     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y); 
+ } 
+ 
+ float fbm(vec2 p) { 
+     float sum = 0.0; 
+     float amp = 1.0; 
+     float freq = 1.0; 
+     for(int i = 0; i < 6; i++) { 
+         sum += noise(p * freq) * amp; 
+         amp *= 0.5; 
+         freq *= 2.0; 
+         p += vec2(3.123, 1.732); 
+     } 
+     return sum; 
+ } 
+ 
+ void main() { 
+     vec2 uv = v_uv; 
+     vec2 aspect = vec2(u_resolution.x/u_resolution.y, 1.0); 
+     uv = uv * 2.0 - 1.0; 
+     uv *= aspect; 
+     
+     vec2 mouseInfluence = (u_mouse * 2.0 - 1.0) * aspect; 
+     float mouseDist = length(uv - mouseInfluence); 
+     float mouseEffect = smoothstep(0.5, 0.0, mouseDist); 
+     
+     float t = u_time * 0.2; 
+     vec2 movement = vec2(sin(t * 0.5), cos(t * 0.7)); 
+     
+     float n1 = fbm(uv * 3.0 + movement + mouseEffect); 
+     float n2 = fbm(uv * 2.0 - movement - mouseEffect); 
+     float n3 = fbm(uv * 4.0 + vec2(n1, n2)); 
+     
+     vec3 col1 = vec3(0.2, 0.5, 0.8); 
+     vec3 col2 = vec3(0.8, 0.2, 0.5); 
+     vec3 col3 = vec3(0.1, 0.8, 0.4); 
+     
+     vec3 finalColor = mix(col1, col2, n1); 
+     finalColor = mix(finalColor, col3, n2 * 0.5); 
+     finalColor += n3 * 0.2; 
+     
+     finalColor += vec3(mouseEffect * 0.2); 
+     
+     gl_FragColor = vec4(finalColor, 1.0); 
+ }
 `;
 
 export default function ShaderBackground({ className = '' }: ShaderBackgroundProps) {
